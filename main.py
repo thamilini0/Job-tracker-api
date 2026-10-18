@@ -1,3 +1,4 @@
+from sqlalchemy import func
 from typing import Optional
 
 from fastapi import FastAPI, Depends, HTTPException
@@ -98,3 +99,19 @@ def delete_application(application_id: int, db: Session = Depends(get_db)):
     db.delete(application)
     db.commit()
     return {"message": "Application deleted"}
+
+
+# ---------- Stats ----------
+
+@app.get("/stats")
+def get_stats(db: Session = Depends(get_db)):
+    rows = (
+        db.query(models.Application.status, func.count(models.Application.id))
+        .group_by(models.Application.status)
+        .all()
+    )
+    stats = {"applied": 0, "interview": 0, "offer": 0, "rejected": 0}
+    for status, count in rows:
+        stats[status] = count
+    stats["total"] = sum(stats.values())
+    return stats
